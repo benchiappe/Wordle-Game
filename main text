@@ -1,0 +1,423 @@
+/* main.cpp
+    Wordle Reload is a game that allows you to guess either a 3 letter word or a 5 letter word.
+    You have a set amount of time to guess a word.  At the conclusion of gameplay,
+    you will be provided stats on your overall gameplay.
+
+    Program 3: Wordle Reload
+
+    Author: Ben Chiappe
+    Date: Feb 17, 2022
+    Class: CS 141, Spring 2022, UIC
+    System: Mac using Replit
+
+*/
+#include <iostream>   // For Input and Output
+#include <fstream>    // For file input and output
+#include <vector>     // Input file is stored in a vector
+#include <cassert>    // For the assert statement used to validate file open
+#include <cctype>     // Allows using the tolower() function
+#include <ctime>      // For the random generator
+#include <string>     // For string functions
+using namespace std;  
+
+
+//--------------------------------------------------------------------------------
+//Display welcome message, introducing the user to the program and
+//describing the instructions for the game
+void gameDisplayInstructions() {
+    cout << "Program 3: Wordle Reload \n"
+        << "CS 141, Spring 2022, UIC \n"
+        << " \n"
+        << "The objective of this game is to guess the randomly selected \n"
+        << "word within a given number of attempts. You can select either \n"
+        << "a three or five word board. \n"
+        << "At the conlusion of the game, stats will be displayed.  \n"
+        << "Indicators will be given if characters of the user entered \n"
+        << "word are reflected in the guessed word. \n"
+        << "  - If the character is in the correct position, the character \n"
+        << "    will display as an uppercase value.\n"
+        << "  - If the character is within the random word, the character \n"
+        << "    will display as a lowercase value.\n"
+        << "  - If you enter a character that is not in the word, an asterisk '*' \n"
+        << "    will display."
+        << " \n"
+        << endl;
+}//end displayWelcomeMessage()
+
+//Function that reads words from 'wordlewords.txt' into a vector
+void readWordleWords(vector <string> &legalWords) {
+   //Read in wordle words into legalWords vector
+    ifstream inStream;                      // Declare an input stream for reading
+    inStream.open("wordlewords.txt");       // Open wordle file
+    assert(inStream.fail() == false);       // Ensure file open worked
+    //If you had previously used vector legalWords, then you might want to clear it
+    //before continuing to use it, though that is not the case here.
+    legalWords.clear();
+    //Keep repeating while input from the file yields a word
+    string newWord;                         // Store a single input word
+    while(inStream >> newWord) {           // While there is another word to be read
+        //Add this new word to the end of the vector, growing it in the process
+        legalWords.push_back(newWord);
+    }
+    //Close the legalWords file
+    inStream.close();
+}
+
+//Function that ends the game if the third menu option is selected
+void printStats(int totalWordsGuessed, int longestStreak, int avgCompTime) {
+  //Print appropriate statements with variables
+	cout << "Overall Stats: " << endl;
+  cout << "  - You guessed: " << totalWordsGuessed << endl;
+	cout << "  - Your longest streak is: " << longestStreak << endl;
+  //Print the completion time depending on input
+  if(totalWordsGuessed != 0)
+	  cout << "  - Average word completion time: " << avgCompTime << endl;
+  else
+    cout << "  - Average word completion time: N/A"<< endl;
+	cout << "Exiting program" << endl;
+}
+
+//Function that prints output when the user wins the game
+void userWin(int timeElapsed, int numAttempts, int numOfLetter) {
+  cout << endl << "Nice Work! You guessed the correct word" << endl;
+  cout << "  - You completed the board in: " << timeElapsed << " seconds." << endl;
+  //Print number of attempts depending on which version was played
+  if(numOfLetter ==3)
+  cout << "  - It took you " << numAttempts << "/4 attempts." << endl;
+  else
+    cout << "  - It took you " << numAttempts << "/6 attempts." << endl;
+}
+
+//Function that compares user-inputted word to the computer-generated word
+string compareWords(string userWord, string computer) {
+  //Store result
+  string result;
+  int correct[5] = {0}; //set index to 1 if the correct letter + position are found
+  //Set the number of asterisks depending on version chosen
+  if(userWord.length() == 3){
+    result = "***";
+  }
+  else{
+    result = "*****";
+  }
+  //Check for correct letter AND position
+  for (unsigned i=0; i < userWord.length(); i++) {
+    if (userWord[i] == computer[i]) {
+      result[i] = toupper(computer[i]);
+      correct[i] = 1;
+    }
+  }
+  //Check for correct letter, but wrong position
+  for (unsigned i=0; i < userWord.length(); i++) {
+      int found = 0;
+      char current = userWord[i];
+      for(unsigned j=0; j<computer.length(); j++){
+        if((computer[j] == current) && (correct[i] == 0)){
+          found = 1;
+        }
+      }
+      if(found == 1){
+        result[i] = tolower(current);
+      }
+  }
+  return result;
+}
+
+//Functon for binary search for the 3 letter words
+int binarySearchString3Letter(string searchWord, vector <string> threeLetterWords){
+   int mid;
+   int low;
+   int high;
+   // Initialize low and high variable
+   low = 0;
+   high = threeLetterWords.size();
+   //Write appropriate while condition below
+   while (low <= high) {
+      // Calculate the middle of low and high
+      mid = (high + low) / 2; 
+     // Save the compared result between 1) the middle index element of threeLetterWord and 2) searchWord   
+      if (threeLetterWords.at(mid) == searchWord) {
+         return mid;
+      }
+      else if (searchWord < threeLetterWords.at(mid)) {
+         high = mid - 1;
+      }
+      else {
+         low = mid + 1;
+      }
+   }
+   return -1; // not found
+}
+
+//Functon for binary search for the 5 letter words
+int binarySearchString5Letter(string searchWord, vector <string> fiveLetterWords){
+   int mid;
+   int low;
+   int high;
+   // Initialize low and high variable
+   low = 0;
+   high = fiveLetterWords.size();
+   //Write appropriate while condition below
+   while (low <= high) {
+      // Calculate the middle of low and high
+      mid = (high + low) / 2;
+      // Save the compared result between 1) the middle index element of threeLetterWord and 2) searchWord
+      if (fiveLetterWords.at(mid) == searchWord) {
+         return mid;
+      }
+      else if (searchWord < fiveLetterWords.at(mid)) {
+         high = mid - 1;
+      }
+      else {
+         low = mid + 1;
+      }
+   }
+   return -1; // not found
+}
+
+//Function that prints the guess in Wordle format
+void printFormatted(string guess){
+  //Prints brackets based on guess
+  for(unsigned i=0; i<guess.length(); i++){
+    cout << "[" << guess[i] << "] ";
+  }
+  cout << endl;
+}
+
+//Start of main
+int main() {
+  //Declare the total stats variables
+  int totalWordsGuessed = 0;
+  int longestStreak = 0;
+  int avgCompTime = 0;
+  int totalTime = 0;
+  int currentStreak = 0;
+  //Declare the win variables
+  int timeElapsed = 0; //stores time in seconds
+  //Read in words from the wordle words file into a vector
+  vector <string> legalWords;
+  readWordleWords(legalWords);  
+  //Initialize the menu option 
+  int menuOption;
+  //Seed random number generator with value 1
+  srand(1);
+    //Display game instructions
+    gameDisplayInstructions();
+    cout << "Select a menu option: \n"
+    << "1. To play Wordle Reload 3 letter play\n"
+    << "2. To play Wordle Reload 5 letter play\n"
+    << "3. Exit the program\n"
+    << "Your choice --> ";
+    //Take user input for the menu option
+    cin >> menuOption;
+    //Declare the vectors for the three and five letter words
+    vector <string> threeLetterWords;
+    vector <string> fiveLetterWords; 
+    //Find the 3 letter and 5 letter words and assign them to the proper vector
+    for (unsigned i = 0; i < legalWords.size(); i++) {
+      if (legalWords[i].length() == 3) {
+        threeLetterWords.push_back(legalWords[i]);
+      }
+      if (legalWords[i].length() == 5) {
+        fiveLetterWords.push_back(legalWords[i]);
+      }
+    }
+    //Keep looping until user selects the option to exit
+    while (true) { //Loops until menu option is 3 
+      int attempts = 1; //set attempts to 1
+      //Option for a 3 letter word
+      if (menuOption == 1) { 
+        //Declare guessing variable
+        string userGuess;
+        //variable to determine if the computerWord has been guessed
+        int guessed = 0;
+        //Print directions
+        cout << endl << "To get started, enter your first 3 letter word." << endl;
+        cout << "You have 4 attempts to guess the random word." << endl;
+        cout << "The timer will start after your first word entry." << endl;
+        cout << "Try to guess the word within 20 seconds." << endl << endl;
+        //Vector that stores the computer word
+        vector <string> guessOutput;
+        //String that stores guessed word
+        string computerWord;
+        //gets a random number in the range 0:threeLetterWords
+        int index = rand()%(threeLetterWords.size()); 
+          computerWord = threeLetterWords[index];
+        //Increment the game until the attempts run out
+        while(attempts < 5 && guessed == 0){
+          cout << "Please enter word --> ";
+          //Take in the guess
+          cin >> userGuess;
+          //Make the guess all lowercase
+          for (unsigned i=0; i < userGuess.length(); i++)
+            userGuess[i] = tolower(userGuess[i]);
+          //check that word is 3 letters
+          if(userGuess.length()!=3){
+            cout << "Invalid word entry - please enter a word that is 3 characters long." << endl;
+          }
+          //check if valid word
+          else if(binarySearchString3Letter(userGuess, threeLetterWords) == -1){
+            cout << "Not a playable word, please select another word." << endl;
+          }
+          else{
+            //Check not over elapsed time
+            time_t startTime = time(NULL);
+            //Declare time variable and set it to null
+            int checkTime = difftime(time(NULL), startTime);       
+            //Check if the user goes over the alotted time 
+            if(checkTime > 20) {
+            cout << "Your time has expired. Try again." << endl;
+            cout << "  - You are " << checkTime - 20 << " seconds over the 20 second time limit." << endl;
+            //Break if this condition occurs
+            break;
+          }
+          else{
+          //Add guess to output vector
+          guessOutput.push_back(compareWords(userGuess, computerWord));
+          //Print out current and past guesses in proper format
+          for(unsigned i=0; i<guessOutput.size(); i++){
+          printFormatted(guessOutput[i]);
+        }
+          if(userGuess == computerWord){
+            guessed = 1;
+            //signals to stop the timer
+            timeElapsed = difftime(time(NULL), startTime);
+            //add timeElapsed to total Time
+            totalTime += timeElapsed;
+            //print out user win message
+            userWin(timeElapsed, attempts, 3);
+            //increment totalWordsGuessed for printing stats
+            totalWordsGuessed++;
+            //increment streak
+            currentStreak++;
+          }
+            else{
+              //Check condition if the max amount of attemps have been reached
+              if(attempts == 4){
+                cout << "Maximum amount of attempts have been reached. Try again." << endl;
+              }
+            }
+        }
+        //Increment attempts
+        attempts++;
+      }
+        
+    }
+        //Update longest streak if necessary
+        if(currentStreak > longestStreak){
+          longestStreak = currentStreak;
+        }
+        //User did not guess word
+        if(guessed == 0){ 
+          currentStreak = 0;
+        }
+  } 
+      //Option for a 5 letter word
+      if (menuOption == 2) {
+      //Store word to be guessed
+      string computerWord; 
+      //Gets a random number in the range 0:threeLetterWords  
+      int index = rand()%(fiveLetterWords.size()); 
+      computerWord = fiveLetterWords[index]; 
+        //Declare guessing variable
+        string userGuess;
+        //flag to determine if the computerWord has been guessed
+        int guessed = 0;
+        //Print directions
+        cout << endl << "To get started, enter your first 5 letter word." << endl;
+        cout << "You have 6 attempts to guess the random word." << endl;
+        cout << "The timer will start after your first word entry." << endl;
+        cout << "Try to guess the word within 40 seconds." << endl << endl;
+        //Vector that stores the guessing output 
+        vector <string> guessOutput;
+        //Loop until it exceeds attempts
+        while(attempts < 7 && guessed == 0){
+          cout << "Please enter word --> ";
+          //Take in guess
+          cin >> userGuess;
+          //Make guess lowercase
+          for (unsigned i=0; i < userGuess.length(); i++)
+            userGuess[i] = tolower(userGuess[i]);
+          //Check that word is 3 letters
+          if(userGuess.length()!=5){
+            cout << "Invalid word entry - please enter a word that is 5 characters long." << endl;
+          }
+          //Check if valid word
+          else if(binarySearchString5Letter(userGuess, fiveLetterWords) == -1){
+            cout << "Not a playable word, please select another word." << endl;
+          }
+          else{
+          //Declare time variable and set it to null
+          time_t startTime = time(NULL);
+          int checkTime = difftime(time(NULL), startTime);   
+            //Check not over elapsed time
+            if(checkTime > 40){
+            cout << "Your time has expired. Try again." << endl;
+            cout << "  - You are " << checkTime - 40 << " seconds over the 20 second time limit." << endl;
+            //Break if this condition is met
+            break;
+          }
+          else{
+          //add guess to output vector
+          guessOutput.push_back(compareWords(userGuess, computerWord));
+          //print out current and past guesses in proper format
+          for(unsigned i=0; i<guessOutput.size(); i++){
+          printFormatted(guessOutput[i]);
+        }
+          if(userGuess == computerWord){
+            guessed = 1;
+            //signals to stop the timer
+            timeElapsed = difftime( time( NULL), startTime);
+            //add timeElapsed to total Time
+            totalTime += timeElapsed;
+            //print out user win message
+            userWin(timeElapsed, attempts, 5);
+            //increment totalWordsGuessed for printing stats
+            totalWordsGuessed++;
+            //increment streak
+            currentStreak++;
+          }    
+          else{
+              //Print statement if attempts exceed alotted amount 
+              if(attempts == 6){
+                cout << "Maximum amount of attempts have been reached. Try again." << endl;
+                //Reset the streak
+                currentStreak = 0;
+              }
+          }
+          //Increment attempts 
+          attempts++;
+    }
+        //Update streak if neccessary
+        if(currentStreak > longestStreak){
+          longestStreak = currentStreak;
+        }
+      }
+  }
+}
+      //Option to quit the game and print the stats
+      if (menuOption == 3) {
+        //Calculate average completion time
+        if(totalWordsGuessed !=0) {
+          avgCompTime = totalTime / totalWordsGuessed;
+        }
+        //Print 0 if nothing was completed
+        else {
+          avgCompTime = 0;
+        }
+        //Call printStats to display the game statistics
+        printStats(totalWordsGuessed, longestStreak, avgCompTime);
+        break; 
+      }
+      //Take in new user menu option
+      cout << "Select a menu option: \n"
+    << "1. To play Wordle Reload 3 letter play\n"
+    << "2. To play Wordle Reload 5 letter play\n"
+    << "3. Exit the program\n"
+    << "Your choice --> ";
+    //Take user input for the menu option
+    cin >> menuOption;  
+  }
+  
+  return 0;
+}//End of Main
